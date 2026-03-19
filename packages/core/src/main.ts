@@ -8,17 +8,25 @@ import { log } from './log.js'
 let shuttingDown = false
 
 export async function startServer() {
-  // 1. Load config
+  // 1. Check config exists, run setup if not
   const configManager = new ConfigManager()
+  const configExists = await configManager.exists()
+
+  if (!configExists) {
+    const { runSetup } = await import('./setup.js')
+    const shouldStart = await runSetup(configManager)
+    if (!shouldStart) process.exit(0)
+  }
+
+  // 2. Load config (validates with Zod)
   await configManager.load()
-
   const config = configManager.get()
-  log.info('Config loaded from', configManager['configPath'])
+  log.info('Config loaded from', configManager.getConfigPath())
 
-  // 2. Create core
+  // 3. Create core
   const core = new OpenACPCore(configManager)
 
-  // 3. Register adapters from config
+  // 4. Register adapters from config
   for (const [channelName, channelConfig] of Object.entries(config.channels)) {
     if (!channelConfig.enabled) continue
 
@@ -57,15 +65,15 @@ export async function startServer() {
     process.exit(1)
   }
 
-  // 4. Start
+  // 5. Start
   await core.start()
 
-  // 5. Log ready
+  // 6. Log ready
   const agents = Object.keys(config.agents).join(', ')
   log.info(`OpenACP started. Agents: ${agents}`)
   log.info('Press Ctrl+C to stop.')
 
-  // 6. Graceful shutdown
+  // 7. Graceful shutdown
   const shutdown = async (signal: string) => {
     if (shuttingDown) return
     shuttingDown = true
