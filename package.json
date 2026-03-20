@@ -43,5 +43,10 @@
     "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "vitest": "^4.1.0"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "grammy": "patches/grammy.patch"
+    }
   }
 }

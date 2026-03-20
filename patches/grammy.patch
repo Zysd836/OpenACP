@@ -1,0 +1,16 @@
+diff --git a/out/shim.node.js b/out/shim.node.js
+index 3b3da198fdb88e8c770ef6d755987f102ba767f1..00b8eb83a9ad97949563d66a71f0deb9e5942d3f 100644
+--- a/out/shim.node.js
++++ b/out/shim.node.js
+@@ -1,7 +1,7 @@
+ "use strict";
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.fetch = exports.AbortController = void 0;
+-var abort_controller_1 = require("abort-controller");
+-Object.defineProperty(exports, "AbortController", { enumerable: true, get: function () { return abort_controller_1.AbortController; } });
+-var node_fetch_1 = require("node-fetch");
+-Object.defineProperty(exports, "fetch", { enumerable: true, get: function () { return node_fetch_1.default; } });
++// Use native AbortController and fetch (available since Node 15+ and Node 18+)
++// instead of abort-controller/node-fetch polyfills which break on Node 24+
++exports.AbortController = globalThis.AbortController;
++exports.fetch = globalThis.fetch;

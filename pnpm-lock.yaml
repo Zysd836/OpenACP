@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  grammy:
+    hash: dsgqscvmnv7l5ltokfnp67mvry
+    path: patches/grammy.patch
+
 importers:
 
   .:
@@ -25,7 +30,7 @@ importers:
         version: 8.0.3
       grammy:
         specifier: ^1.30.0
-        version: 1.41.1
+        version: 1.41.1(patch_hash=dsgqscvmnv7l5ltokfnp67mvry)
       hono:
         specifier: ^4.12.8
         version: 4.12.8
@@ -2281,6 +2286,16 @@ snapshots:
       resolve-pkg-maps: 1.0.0
 
   grammy@1.41.1:
+    dependencies:
+      '@grammyjs/types': 3.25.0
+      abort-controller: 3.0.0
+      debug: 4.4.3
+      node-fetch: 2.7.0
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
+
+  grammy@1.41.1(patch_hash=dsgqscvmnv7l5ltokfnp67mvry):
     dependencies:
       '@grammyjs/types': 3.25.0
       abort-controller: 3.0.0
