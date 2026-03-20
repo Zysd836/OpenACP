@@ -171,6 +171,29 @@ export class ConfigManager {
       configUpdated = true;
       log.info("Added tunnel section to config (enabled by default with cloudflare)");
     }
+    // 3.6. Auto-migrate: fix agent commands (claude → claude-agent-acp)
+    // The plain "claude" command is the CLI, not the ACP-compatible agent.
+    // Only "claude-agent-acp" speaks the ACP protocol correctly.
+    const AGENT_COMMAND_MIGRATIONS: Record<string, string[]> = {
+      "claude-agent-acp": ["claude", "claude-code"], // prefer claude-agent-acp over these
+    };
+    if (raw.agents && typeof raw.agents === "object") {
+      for (const [agentName, agentDef] of Object.entries(raw.agents)) {
+        const def = agentDef as { command?: string };
+        if (!def.command) continue;
+        for (const [correctCmd, legacyCmds] of Object.entries(AGENT_COMMAND_MIGRATIONS)) {
+          if (legacyCmds.includes(def.command)) {
+            log.warn(
+              { agent: agentName, oldCommand: def.command, newCommand: correctCmd },
+              `Auto-migrating agent command: "${def.command}" → "${correctCmd}"`,
+            );
+            def.command = correctCmd;
+            configUpdated = true;
+          }
+        }
+      }
+    }
+
     if (configUpdated) {
       fs.writeFileSync(this.configPath, JSON.stringify(raw, null, 2));
     }

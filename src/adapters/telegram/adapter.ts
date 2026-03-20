@@ -236,13 +236,21 @@ export class TelegramAdapter extends ChannelAdapter {
 
     // Spawn assistant (after bot is started so it can send messages)
     try {
+      log.info("Spawning assistant session...");
       this.assistantSession = await spawnAssistant(
         this.core as OpenACPCore,
         this,
         this.assistantTopicId,
       );
+      log.info({ sessionId: this.assistantSession.id }, "Assistant session ready");
     } catch (err) {
       log.error({ err }, "Failed to spawn assistant");
+      // Notify user in assistant topic
+      this.bot.api.sendMessage(
+        this.telegramConfig.chatId,
+        `⚠️ <b>Failed to start assistant session.</b>\n\n<code>${err instanceof Error ? err.message : String(err)}</code>`,
+        { message_thread_id: this.assistantTopicId, parse_mode: "HTML" },
+      ).catch(() => {});
     }
 
     // Send welcome message with menu to assistant topic
@@ -302,7 +310,11 @@ export class TelegramAdapter extends ChannelAdapter {
 
       // Assistant topic → send typing indicator and forward to assistant session
       if (threadId === this.assistantTopicId) {
-        await this.finalizeDraft(this.assistantSession!.id);
+        if (!this.assistantSession) {
+          await ctx.reply("⚠️ Assistant is not available yet. Please try again shortly.", { parse_mode: "HTML" });
+          return;
+        }
+        await this.finalizeDraft(this.assistantSession.id);
         ctx.replyWithChatAction("typing").catch(() => {});
         handleAssistantMessage(this.assistantSession, ctx.message.text).catch(
           (err) => log.error({ err }, "Assistant error"),

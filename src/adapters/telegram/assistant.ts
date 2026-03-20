@@ -1,4 +1,6 @@
 import type { OpenACPCore, ChannelAdapter, Config, Session } from "../../core/index.js";
+import { createChildLogger } from "../../core/log.js";
+const log = createChildLogger({ module: "telegram-assistant" });
 
 export async function spawnAssistant(
   core: OpenACPCore,
@@ -8,6 +10,7 @@ export async function spawnAssistant(
   const config = core.configManager.get();
 
   // Create session with default agent
+  log.info({ agent: config.defaultAgent }, "Creating assistant session...");
   const session = await core.sessionManager.createSession(
     "telegram",
     config.defaultAgent,
@@ -15,6 +18,7 @@ export async function spawnAssistant(
     core.agentManager,
   );
   session.threadId = String(assistantTopicId);
+  log.info({ sessionId: session.id }, "Assistant agent spawned, sending system prompt...");
 
   // Send system prompt BEFORE wiring events. enqueuePrompt awaits the full
   // agent response, so by the time it returns the system prompt conversation
@@ -22,6 +26,7 @@ export async function spawnAssistant(
   // intentionally discarded — users only see responses to their own messages.
   const systemPrompt = buildAssistantSystemPrompt(config);
   await session.enqueuePrompt(systemPrompt);
+  log.info({ sessionId: session.id }, "Assistant system prompt completed");
 
   // Wire events to adapter — only messages after this point reach the user
   core.wireSessionEvents(session, adapter);

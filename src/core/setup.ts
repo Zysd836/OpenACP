@@ -285,7 +285,9 @@ async function detectChatId(token: string): Promise<number> {
 // --- Agent detection ---
 
 const KNOWN_AGENTS: Array<{ name: string; commands: string[] }> = [
-  { name: "claude", commands: ["claude-agent-acp", "claude-code", "claude"] },
+  // claude-agent-acp is bundled as a dependency — no detection needed, but
+  // kept here so detectAgents() still returns it for display purposes.
+  { name: "claude", commands: ["claude-agent-acp"] },
   { name: "codex", commands: ["codex"] },
 ];
 
@@ -424,12 +426,14 @@ export async function setupAgents(): Promise<{
   const detected = await detectAgents();
   const agents: Config["agents"] = {};
 
-  if (detected.length > 0) {
-    for (const agent of detected) {
+  // claude-agent-acp is always bundled, so always include it
+  agents["claude"] = { command: "claude-agent-acp", args: [], env: {} };
+
+  // Add any other detected agents (e.g. codex)
+  for (const agent of detected) {
+    if (agent.name !== "claude") {
       agents[agent.name] = { command: agent.command, args: [], env: {} };
     }
-  } else {
-    agents["claude"] = { command: "claude-agent-acp", args: [], env: {} };
   }
 
   const defaultAgent = Object.keys(agents)[0];
