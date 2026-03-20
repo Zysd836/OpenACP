@@ -11,14 +11,14 @@ export interface DetectedAction {
 }
 
 // Command patterns: /new [agent] [workspace], /cancel
-// Agent and workspace are ASCII-only tokens (no Unicode letters) to avoid matching Vietnamese words
+// Agent and workspace are ASCII-only tokens (no Unicode letters) to avoid matching non-ASCII words
 const CMD_NEW_RE =
   /\/new(?:\s+([^\s\u0080-\uFFFF]+)(?:\s+([^\s\u0080-\uFFFF]+))?)?/;
 const CMD_CANCEL_RE = /\/cancel\b/;
 
 // Keyword patterns (compound phrases only to avoid false positives)
-const KW_NEW_RE = /(?:tao|tạo|create|new)\s+session/i;
-const KW_CANCEL_RE = /(?:huy|huỷ|cancel|dung|dừng)\s+session/i;
+const KW_NEW_RE = /(?:create|new)\s+session/i;
+const KW_CANCEL_RE = /(?:cancel|stop)\s+session/i;
 
 export function detectAction(text: string): DetectedAction | null {
   if (!text) return null;
@@ -82,11 +82,11 @@ export function buildActionKeyboard(
 ): InlineKeyboard {
   const keyboard = new InlineKeyboard();
   if (action.action === "new_session") {
-    keyboard.text("✅ Tạo session", `a:${actionId}`);
-    keyboard.text("❌ Huỷ", `a:dismiss:${actionId}`);
+    keyboard.text("✅ Create session", `a:${actionId}`);
+    keyboard.text("❌ Cancel", `a:dismiss:${actionId}`);
   } else {
-    keyboard.text("⛔ Huỷ session", `a:${actionId}`);
-    keyboard.text("❌ Không", `a:dismiss:${actionId}`);
+    keyboard.text("⛔ Cancel session", `a:${actionId}`);
+    keyboard.text("❌ No", `a:dismiss:${actionId}`);
   }
   return keyboard;
 }
@@ -109,21 +109,21 @@ export function setupActionCallbacks(
     } catch {
       /* message may be old */
     }
-    await ctx.answerCallbackQuery({ text: "Đã huỷ" });
+    await ctx.answerCallbackQuery({ text: "Dismissed" });
   });
 
   bot.callbackQuery(/^a:(?!dismiss)/, async (ctx) => {
     const actionId = ctx.callbackQuery.data.replace("a:", "");
     const action = getAction(actionId);
     if (!action) {
-      await ctx.answerCallbackQuery({ text: "Action đã hết hạn" });
+      await ctx.answerCallbackQuery({ text: "Action expired" });
       return;
     }
     removeAction(actionId);
 
     try {
       if (action.action === "new_session") {
-        await ctx.answerCallbackQuery({ text: "⏳ Đang tạo session..." });
+        await ctx.answerCallbackQuery({ text: "⏳ Creating session..." });
         const { threadId } = await executeNewSession(
           bot,
           core,
@@ -148,12 +148,12 @@ export function setupActionCallbacks(
         const assistantId = getAssistantSessionId();
         const cancelled = await executeCancelSession(core, assistantId);
         if (cancelled) {
-          await ctx.answerCallbackQuery({ text: "⛔ Session đã huỷ" });
+          await ctx.answerCallbackQuery({ text: "⛔ Session cancelled" });
           const originalText = ctx.callbackQuery.message?.text ?? "";
           try {
             await ctx.editMessageText(
               originalText +
-                `\n\n⛔ Session "${cancelled.name ?? cancelled.id}" đã huỷ`,
+                `\n\n⛔ Session "${cancelled.name ?? cancelled.id}" cancelled`,
               { parse_mode: "HTML" },
             );
           } catch {
@@ -163,7 +163,7 @@ export function setupActionCallbacks(
           }
         } else {
           await ctx.answerCallbackQuery({
-            text: "Không có session nào đang chạy",
+            text: "No active session",
           });
           try {
             await ctx.editMessageReplyMarkup({
@@ -175,7 +175,7 @@ export function setupActionCallbacks(
         }
       }
     } catch {
-      await ctx.answerCallbackQuery({ text: "❌ Lỗi, thử lại sau" });
+      await ctx.answerCallbackQuery({ text: "❌ Error, try again later" });
       try {
         await ctx.editMessageReplyMarkup({
           reply_markup: { inline_keyboard: [] },

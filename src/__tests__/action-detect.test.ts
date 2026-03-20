@@ -5,7 +5,7 @@ describe("detectAction", () => {
   describe("command pattern detection", () => {
     it("detects /new with agent and workspace", () => {
       const result = detectAction(
-        "Mình sẽ tạo session với /new claude ~/project nhé!",
+        "I will create a session with /new claude ~/project for you!",
       );
       expect(result).toEqual({
         action: "new_session",
@@ -15,7 +15,7 @@ describe("detectAction", () => {
     });
 
     it("detects /new with agent only", () => {
-      const result = detectAction("Bạn có thể dùng /new claude để bắt đầu");
+      const result = detectAction("Try /new claude");
       expect(result).toEqual({
         action: "new_session",
         agent: "claude",
@@ -24,7 +24,7 @@ describe("detectAction", () => {
     });
 
     it("detects /new without params", () => {
-      const result = detectAction("Hãy dùng /new để tạo session mới");
+      const result = detectAction("Please run /new");
       expect(result).toEqual({
         action: "new_session",
         agent: undefined,
@@ -33,26 +33,17 @@ describe("detectAction", () => {
     });
 
     it("detects /cancel", () => {
-      const result = detectAction("Bạn có thể dùng /cancel để huỷ session");
+      const result = detectAction("You can use /cancel to cancel the session");
       expect(result).toEqual({ action: "cancel_session" });
     });
 
     it("does not detect /status or /help", () => {
-      expect(detectAction("Dùng /status để xem trạng thái")).toBeNull();
-      expect(detectAction("Gõ /help để xem hướng dẫn")).toBeNull();
+      expect(detectAction("Use /status to check status")).toBeNull();
+      expect(detectAction("Type /help for instructions")).toBeNull();
     });
   });
 
   describe("keyword detection", () => {
-    it('detects "tao session" keyword', () => {
-      const result = detectAction("Mình sẽ tạo session mới cho bạn nhé");
-      expect(result).toEqual({
-        action: "new_session",
-        agent: undefined,
-        workspace: undefined,
-      });
-    });
-
     it('detects "create session" keyword', () => {
       const result = detectAction("I will create session for you");
       expect(result).toEqual({
@@ -62,9 +53,13 @@ describe("detectAction", () => {
       });
     });
 
-    it('detects "huy session" keyword', () => {
-      const result = detectAction("Mình sẽ huỷ session hiện tại");
-      expect(result).toEqual({ action: "cancel_session" });
+    it('detects "new session" keyword', () => {
+      const result = detectAction("Let me start a new session for you");
+      expect(result).toEqual({
+        action: "new_session",
+        agent: undefined,
+        workspace: undefined,
+      });
     });
 
     it('detects "cancel session" keyword', () => {
@@ -72,18 +67,19 @@ describe("detectAction", () => {
       expect(result).toEqual({ action: "cancel_session" });
     });
 
-    it('does not false-positive on single word "huy"', () => {
-      expect(detectAction("Anh Huy ơi, chào anh")).toBeNull();
+    it('detects "stop session" keyword', () => {
+      const result = detectAction("I will stop session now");
+      expect(result).toEqual({ action: "cancel_session" });
     });
 
     it("does not false-positive on unrelated text", () => {
-      expect(detectAction("Xin chào, tôi có thể giúp gì cho bạn?")).toBeNull();
+      expect(detectAction("Hello, how can I help you?")).toBeNull();
     });
   });
 
   describe("priority", () => {
     it("prefers command pattern over keyword", () => {
-      const result = detectAction("Tạo session bằng /new claude ~/work");
+      const result = detectAction("Create session with /new claude ~/work");
       expect(result).toEqual({
         action: "new_session",
         agent: "claude",
