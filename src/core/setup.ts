@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { input, select } from "@inquirer/prompts";
 import type { Config, ConfigManager } from "./config.js";
+import { expandHome } from "./config.js";
 
 // --- ANSI colors ---
 
@@ -314,8 +315,6 @@ export async function setupTelegram(): Promise<Config["channels"][string]> {
     if (action === "skip") break;
   }
 
-  console.log(step(2, "Group Chat"));
-
   const chatId = await detectChatId(botToken);
 
   return {
@@ -352,7 +351,7 @@ export async function setupAgents(): Promise<{
 }
 
 export async function setupWorkspace(): Promise<{ baseDir: string }> {
-  console.log(step(3, "Workspace"));
+  console.log(step(2, "Workspace"));
 
   const baseDir = await input({
     message: "Base directory for workspaces:",
@@ -361,6 +360,48 @@ export async function setupWorkspace(): Promise<{ baseDir: string }> {
   });
 
   return { baseDir: baseDir.trim().replace(/^['"]|['"]$/g, "") };
+}
+
+export async function setupRunMode(): Promise<{ runMode: 'foreground' | 'daemon'; autoStart: boolean }> {
+  console.log(step(3, 'Run Mode'))
+
+  // Don't show daemon option on Windows
+  if (process.platform === 'win32') {
+    console.log(dim('  (Daemon mode not available on Windows)'))
+    return { runMode: 'foreground', autoStart: false }
+  }
+
+  const mode = await select({
+    message: 'How would you like to run OpenACP?',
+    choices: [
+      {
+        name: 'Background (daemon)',
+        value: 'daemon' as const,
+        description: 'Runs silently, auto-starts on boot. Manage with: openacp status | stop | logs',
+      },
+      {
+        name: 'Foreground (terminal)',
+        value: 'foreground' as const,
+        description: 'Runs in current terminal session. Start with: openacp',
+      },
+    ],
+  })
+
+  if (mode === 'daemon') {
+    const { installAutoStart, isAutoStartSupported } = await import('./autostart.js')
+    const autoStart = isAutoStartSupported()
+    if (autoStart) {
+      const result = installAutoStart(expandHome('~/.openacp/logs'))
+      if (result.success) {
+        console.log(ok('Auto-start on boot enabled'))
+      } else {
+        console.log(warn(`Auto-start failed: ${result.error}`))
+      }
+    }
+    return { runMode: 'daemon', autoStart }
+  }
+
+  return { runMode: 'foreground', autoStart: false }
 }
 
 // --- Orchestrator ---
@@ -380,6 +421,7 @@ export async function runSetup(configManager: ConfigManager): Promise<boolean> {
     const telegram = await setupTelegram();
     const { agents, defaultAgent } = await setupAgents();
     const workspace = await setupWorkspace();
+    const { runMode, autoStart } = await setupRunMode();
     const security = {
       allowedUserIds: [] as string[],
       maxConcurrentSessions: 5,
@@ -399,8 +441,8 @@ export async function runSetup(configManager: ConfigManager): Promise<boolean> {
         maxFiles: 7,
         sessionLogRetentionDays: 30,
       },
-      runMode: "foreground",
-      autoStart: false,
+      runMode,
+      autoStart,
     };
 
     try {
