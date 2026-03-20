@@ -16,7 +16,6 @@ const files = fs.readdirSync(distDir)
 for (const file of files) {
   const filePath = path.join(distDir, file)
   if (file.endsWith('.mjs') || file.endsWith('.d.mts')) {
-    // Update import references inside the file
     let content = fs.readFileSync(filePath, 'utf-8')
     content = content.replace(/\.mjs/g, '.js')
     content = content.replace(/\.d\.mts/g, '.d.ts')
@@ -37,20 +36,8 @@ if (!cliContent.startsWith('#!/usr/bin/env node')) {
 }
 fs.chmodSync(cliPath, 0o755)
 
-// 3. Generate package.json
+// 4. Generate package.json
 const rootPkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf-8'))
-const corePkg = JSON.parse(fs.readFileSync(path.join(root, 'packages/core/package.json'), 'utf-8'))
-const telegramPkg = JSON.parse(fs.readFileSync(path.join(root, 'packages/adapters/telegram/package.json'), 'utf-8'))
-
-// Merge dependencies from core + telegram, excluding workspace refs
-const deps: Record<string, string> = {}
-for (const pkg of [corePkg, telegramPkg]) {
-  for (const [name, version] of Object.entries(pkg.dependencies || {})) {
-    if (typeof version === 'string' && !version.startsWith('workspace:')) {
-      deps[name] = version
-    }
-  }
-}
 
 const publishPkg = {
   name: '@openacp/cli',
@@ -68,10 +55,10 @@ const publishPkg = {
   },
   files: ['dist/', 'README.md'],
   engines: { node: '>=20' },
-  dependencies: deps,
+  dependencies: rootPkg.dependencies,
   repository: {
     type: 'git',
-    url: 'https://github.com/nicepkg/OpenACP',
+    url: 'https://github.com/Open-ACP/OpenACP',
   },
   license: 'AGPL-3.0',
   keywords: ['acp', 'ai', 'coding-agent', 'telegram', 'claude', 'codex'],
@@ -82,7 +69,7 @@ fs.writeFileSync(
   JSON.stringify(publishPkg, null, 2) + '\n'
 )
 
-// 4. Copy README
+// 5. Copy README
 fs.copyFileSync(
   path.join(root, 'README.md'),
   path.join(root, 'dist-publish/README.md')
