@@ -55,7 +55,7 @@ export class TelegramAdapter extends ChannelAdapter {
   private skillMessages: Map<string, number> = new Map(); // sessionId → pinned messageId
 
   constructor(core: OpenACPCore, config: TelegramChannelConfig) {
-    super(core, config as any);
+    super(core, config as never);
     this.telegramConfig = config;
   }
 
@@ -64,13 +64,19 @@ export class TelegramAdapter extends ChannelAdapter {
 
     // Global error handler — prevent unhandled errors from crashing the bot
     this.bot.catch((err) => {
-      log.error({ err: err }, "Telegram bot error");
+      const rootCause = err.error instanceof Error ? err.error : err;
+      log.error({ err: rootCause }, "Telegram bot error");
     });
 
-    // Ensure allowed_updates includes callback_query on every poll
+    // Ensure allowed_updates includes callback_query on every poll.
+    // bot.start() passes allowed_updates, but grammY only sends it on the first
+    // getUpdates call. Subsequent polls may omit the parameter, causing Telegram
+    // to fall back to its default (which excludes callback_query). This transformer
+    // guarantees callback_query is always requested.
     this.bot.api.config.use((prev, method, payload, signal) => {
       if (method === "getUpdates") {
-        (payload as any).allowed_updates = (payload as any).allowed_updates ?? [
+        const p = payload as never as Record<string, unknown>;
+        p.allowed_updates = (p.allowed_updates as string[] | undefined) ?? [
           "message",
           "callback_query",
         ];
@@ -266,7 +272,7 @@ export class TelegramAdapter extends ChannelAdapter {
 
       case "tool_call": {
         await this.finalizeDraft(sessionId);
-        const meta = content.metadata as any;
+        const meta = content.metadata as never as { id: string; name: string; kind?: string; status?: string; content?: unknown };
         const msg = await this.bot.api.sendMessage(
           this.telegramConfig.chatId,
           formatToolCall(meta),
@@ -288,7 +294,7 @@ export class TelegramAdapter extends ChannelAdapter {
       }
 
       case "tool_update": {
-        const meta = content.metadata as any;
+        const meta = content.metadata as never as { id: string; name: string; kind?: string; status: string; content?: unknown };
         const toolState = this.toolCallMessages.get(sessionId)?.get(meta.id);
         if (toolState) {
           // Merge name/kind from original tool_call
@@ -315,7 +321,7 @@ export class TelegramAdapter extends ChannelAdapter {
         await this.finalizeDraft(sessionId);
         await this.bot.api.sendMessage(
           this.telegramConfig.chatId,
-          formatPlan(content.metadata as any),
+          formatPlan(content.metadata as never as { entries: Array<{ content: string; status: string }> }),
           {
             message_thread_id: threadId,
             parse_mode: "HTML",
@@ -329,7 +335,7 @@ export class TelegramAdapter extends ChannelAdapter {
         // Show usage stats
         await this.bot.api.sendMessage(
           this.telegramConfig.chatId,
-          formatUsage(content.metadata as any),
+          formatUsage(content.metadata as never as { tokensUsed?: number; contextSize?: number; cost?: { amount: number; currency: string } }),
           {
             message_thread_id: threadId,
             parse_mode: "HTML",

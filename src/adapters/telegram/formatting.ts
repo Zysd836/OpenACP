@@ -67,24 +67,24 @@ const KIND_ICON: Record<string, string> = {
   search: '🔍', fetch: '🌐', think: '🧠', move: '📦', other: '🛠️',
 }
 
-function extractContentText(content: unknown): string {
-  if (!content) return ''
+function extractContentText(content: unknown, depth = 0): string {
+  if (!content || depth > 5) return ''
   if (typeof content === 'string') return content
   if (Array.isArray(content)) {
     return content
-      .map((c: any) => extractContentText(c))
+      .map((c: unknown) => extractContentText(c, depth + 1))
       .filter(Boolean)
       .join('\n')
   }
   if (typeof content === 'object' && content !== null) {
-    const c = content as any
+    const c = content as Record<string, unknown>
     // ACP content blocks: {type: ..., text: ...} or {type: ..., content: ...}
     if (c.type === 'text' && typeof c.text === 'string') return c.text
     if (typeof c.text === 'string') return c.text
     if (typeof c.content === 'string') return c.content
     // Tool input/output objects
-    if (c.input) return extractContentText(c.input)
-    if (c.output) return extractContentText(c.output)
+    if (c.input) return extractContentText(c.input, depth + 1)
+    if (c.output) return extractContentText(c.output, depth + 1)
     // Fallback: pretty-print JSON (but skip type-only objects)
     const keys = Object.keys(c).filter(k => k !== 'type')
     if (keys.length === 0) return ''
