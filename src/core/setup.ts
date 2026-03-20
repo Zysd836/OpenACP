@@ -17,7 +17,8 @@ const c = {
   white: "\x1b[37m",
 };
 
-const ok = (msg: string) => `${c.green}${c.bold}✓${c.reset} ${c.green}${msg}${c.reset}`;
+const ok = (msg: string) =>
+  `${c.green}${c.bold}✓${c.reset} ${c.green}${msg}${c.reset}`;
 const warn = (msg: string) => `${c.yellow}⚠ ${msg}${c.reset}`;
 const fail = (msg: string) => `${c.red}✗ ${msg}${c.reset}`;
 const step = (n: number, title: string) =>
@@ -95,8 +96,7 @@ function promptManualChatId(): Promise<number> {
     message: "Supergroup chat ID (e.g. -1001234567890):",
     validate: (val) => {
       const n = Number(val.trim());
-      if (isNaN(n) || !Number.isInteger(n))
-        return "Chat ID must be an integer";
+      if (isNaN(n) || !Number.isInteger(n)) return "Chat ID must be an integer";
       return true;
     },
   }).then((val) => Number(val.trim()));
@@ -114,8 +114,7 @@ async function detectChatId(token: string): Promise<number> {
       result?: Array<{ update_id: number }>;
     };
     if (clearData.ok && clearData.result?.length) {
-      lastUpdateId =
-        clearData.result[clearData.result.length - 1].update_id;
+      lastUpdateId = clearData.result[clearData.result.length - 1].update_id;
     }
   } catch {
     // ignore
@@ -127,8 +126,12 @@ async function detectChatId(token: string): Promise<number> {
   console.log(dim("  2. Group Settings → convert to Supergroup"));
   console.log(dim("  3. Enable Topics in group settings"));
   console.log("");
-  console.log(`  ${c.bold}Then send any message in the group.${c.reset}`);
-  console.log(dim(`  Listening... press ${c.reset}${c.yellow}m${c.reset}${c.dim} to enter ID manually`));
+  console.log(`  ${c.bold}Then send "hi" in the group.${c.reset}`);
+  console.log(
+    dim(
+      `  Listening... press ${c.reset}${c.yellow}m${c.reset}${c.dim} to enter ID manually`,
+    ),
+  );
   console.log("");
 
   const MAX_ATTEMPTS = 120;
@@ -189,8 +192,7 @@ async function detectChatId(token: string): Promise<number> {
         const groups = new Map<number, string>();
         for (const update of data.result) {
           lastUpdateId = update.update_id;
-          const chat =
-            update.message?.chat ?? update.my_chat_member?.chat;
+          const chat = update.message?.chat ?? update.my_chat_member?.chat;
           if (chat && (chat.type === "supergroup" || chat.type === "group")) {
             groups.set(chat.id, chat.title ?? String(chat.id));
           }
@@ -198,7 +200,9 @@ async function detectChatId(token: string): Promise<number> {
 
         if (groups.size === 1) {
           const [id, title] = [...groups.entries()][0];
-          console.log(ok(`Group detected: ${c.bold}${title}${c.reset}${c.green} (${id})`));
+          console.log(
+            ok(`Group detected: ${c.bold}${title}${c.reset}${c.green} (${id})`),
+          );
           cleanup();
           return id;
         }
@@ -340,7 +344,9 @@ export async function setupAgents(): Promise<{
 
   const defaultAgent = Object.keys(agents)[0];
   const agentCmd = agents[defaultAgent].command;
-  console.log(ok(`Agent: ${c.bold}${defaultAgent}${c.reset}${c.green} (${agentCmd})`));
+  console.log(
+    ok(`Agent: ${c.bold}${defaultAgent}${c.reset}${c.green} (${agentCmd})`),
+  );
 
   return { agents, defaultAgent };
 }
@@ -398,12 +404,16 @@ export async function runSetup(configManager: ConfigManager): Promise<boolean> {
     try {
       await configManager.writeNew(config);
     } catch (writeErr) {
-      console.log(fail(`Could not save config: ${(writeErr as Error).message}`));
+      console.log(
+        fail(`Could not save config: ${(writeErr as Error).message}`),
+      );
       return false;
     }
 
     console.log("");
-    console.log(ok(`Config saved to ${c.bold}${configManager.getConfigPath()}`));
+    console.log(
+      ok(`Config saved to ${c.bold}${configManager.getConfigPath()}`),
+    );
     console.log(ok("Starting OpenACP..."));
     console.log("");
 
