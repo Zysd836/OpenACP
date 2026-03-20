@@ -177,11 +177,12 @@ async function main() {
   const { ConfigManager } = await import('./core/config.js')
   const cm = new ConfigManager()
 
-  // If no config, run setup (which will decide mode)
+  // If no config, run setup first
   if (!(await cm.exists())) {
-    const { startServer } = await import('./main.js')
-    await startServer()
-    return
+    const { runSetup } = await import('./core/setup.js')
+    const shouldStart = await runSetup(cm)
+    if (!shouldStart) process.exit(0)
+    // Config now exists — fall through to read runMode and start accordingly
   }
 
   await cm.load()
