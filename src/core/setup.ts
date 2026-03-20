@@ -443,6 +443,10 @@ export async function runSetup(configManager: ConfigManager): Promise<boolean> {
       },
       runMode,
       autoStart,
+      api: {
+        port: 21420,
+        host: '127.0.0.1',
+      },
     };
 
     try {
