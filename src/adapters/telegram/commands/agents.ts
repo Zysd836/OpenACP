@@ -1,7 +1,7 @@
 import type { Context } from "grammy";
 import { InlineKeyboard } from "grammy";
 import type { OpenACPCore } from "../../../core/core.js";
-import type { InstallProgress, AgentListItem } from "../../../core/types.js";
+import type { InstallProgress } from "../../../core/types.js";
 import { escapeHtml } from "../formatting.js";
 
 const AGENTS_PER_PAGE = 6;
@@ -228,7 +228,19 @@ async function installAgentWithProgress(ctx: Context, core: OpenACPCore, nameOrI
     },
   };
 
-  await catalog.install(nameOrId, progress);
+  const result = await catalog.install(nameOrId, progress);
+
+  // Show setup steps as a follow-up message
+  if (result.ok && result.setupSteps?.length) {
+    let setupText = `📋 <b>Setup for ${escapeHtml(result.agentKey)}:</b>\n\n`;
+    for (const step of result.setupSteps) {
+      setupText += `→ ${escapeHtml(step)}\n`;
+    }
+    setupText += `\n<i>Run in terminal: openacp agents info ${escapeHtml(result.agentKey)}</i>`;
+    try {
+      await ctx.reply(setupText, { parse_mode: "HTML" });
+    } catch { /* ignore */ }
+  }
 }
 
 function truncate(text: string, maxLen: number): string {

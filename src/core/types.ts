@@ -169,6 +169,7 @@ export interface InstallResult {
   agentKey: string;
   error?: string;
   hint?: string;
+  setupSteps?: string[];
 }
 
 export type SessionStatus =

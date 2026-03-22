@@ -39,7 +39,8 @@ export async function handleHelp(ctx: Context): Promise<void> {
       `/cancel — Cancel session (in session topic)\n` +
       `/status — Show session or system status\n` +
       `/sessions — List all sessions\n` +
-      `/agents — List available agents\n\n` +
+      `/agents — Browse & install agents\n` +
+      `/install <name> — Install an agent\n\n` +
       `⚙️ <b>System</b>\n` +
       `/restart — Restart OpenACP\n` +
       `/update — Update to latest version\n` +

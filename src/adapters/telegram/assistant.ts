@@ -36,11 +36,18 @@ export async function spawnAssistant(
   }
   const topicSummary = Array.from(statusCounts.entries()).map(([status, count]) => ({ status, count }));
 
+  // Get agent info from catalog
+  const installedAgents = Object.keys(core.agentCatalog.getInstalledEntries());
+  const availableItems = core.agentCatalog.getAvailable();
+  const availableAgentCount = availableItems.filter(i => !i.installed).length;
+
   const ctx: AssistantContext = {
     config,
     activeSessionCount: activeCount,
     totalSessionCount: allRecords.length,
     topicSummary,
+    installedAgents,
+    availableAgentCount,
   };
 
   // Fire system prompt in background — don't block startup.
@@ -57,6 +64,8 @@ export interface AssistantContext {
   activeSessionCount: number
   totalSessionCount: number
   topicSummary: { status: string; count: number }[]
+  installedAgents?: string[]
+  availableAgentCount?: number
 }
 
 export interface WelcomeContext {
@@ -98,8 +107,8 @@ export function buildWelcomeMessage(ctx: WelcomeContext): string {
 }
 
 export function buildAssistantSystemPrompt(ctx: AssistantContext): string {
-  const { config, activeSessionCount, totalSessionCount, topicSummary } = ctx;
-  const agentNames = Object.keys(config.agents).join(", ");
+  const { config, activeSessionCount, totalSessionCount, topicSummary, installedAgents, availableAgentCount } = ctx;
+  const agentNames = installedAgents?.length ? installedAgents.join(", ") : Object.keys(config.agents).join(", ");
   const topicBreakdown =
     topicSummary.map((s) => `${s.status}: ${s.count}`).join(", ") || "none";
 
@@ -108,7 +117,8 @@ export function buildAssistantSystemPrompt(ctx: AssistantContext): string {
 ## Current State
 - Active sessions: ${activeSessionCount} / ${totalSessionCount} total
 - Topics by status: ${topicBreakdown}
-- Available agents: ${agentNames}
+- Installed agents: ${agentNames}
+- Available in ACP Registry: ${availableAgentCount ?? "28+"}  more agents (use /agents to browse)
 - Default agent: ${config.defaultAgent}
 - Workspace base directory: ${config.workspace.baseDir}
 
@@ -116,10 +126,21 @@ export function buildAssistantSystemPrompt(ctx: AssistantContext): string {
 
 ### Create Session
 - The workspace is the project directory where the agent will work (read, write, execute code). It is NOT the base directory — it should be a specific project folder like \`~/code/my-project\` or \`${config.workspace.baseDir}/my-app\`.
-- Ask which agent to use (if multiple are configured). Show available: ${agentNames}
+- Ask which agent to use (if multiple are installed). Show installed: ${agentNames}
 - Ask which project directory to use as workspace. Suggest \`${config.workspace.baseDir}\` as the base, but explain the user can provide any path.
 - Confirm before creating: show agent name + full workspace path.
 - Create via: \`openacp api new <agent> <workspace>\`
+
+### Browse & Install Agents
+- Guide users to /agents command to see all available agents (installed + from ACP Registry)
+- The /agents list is paginated with install buttons — users can tap to install directly
+- For CLI users: \`openacp agents install <name>\`
+- Some agents need login/setup after install — guide users to \`openacp agents info <name>\` for setup steps
+- To run agent CLI for login: \`openacp agents run <name> -- <args>\`
+- Common setup examples:
+  - Gemini: \`openacp agents run gemini -- auth login\`
+  - GitHub Copilot: \`openacp agents run copilot -- auth login\`
+  - Codex: needs OPENAI_API_KEY environment variable
 
 ### Check Status / List Sessions
 - Run \`openacp api status\` for active sessions overview
@@ -173,12 +194,18 @@ openacp api delete-topic <id> --force    # Force delete active
 openacp api cleanup                      # Cleanup finished topics
 openacp api cleanup --status finished,error
 
+# Agent management (user-facing CLI commands)
+openacp agents                           # List installed + available agents
+openacp agents install <name>            # Install agent from ACP Registry
+openacp agents uninstall <name>          # Remove agent
+openacp agents info <name>               # Show details & setup guide
+openacp agents run <name> -- <args>      # Run agent CLI (for login, etc.)
+openacp agents refresh                   # Force-refresh registry
+
 # System
 openacp api health                       # System health
 openacp config                           # Edit config (interactive)
 openacp config set <key> <value>         # Update config value
-openacp api config                       # Show config (deprecated)
-openacp api config set <key> <value>     # Update config (deprecated)
 openacp api adapters                     # List adapters
 openacp api tunnel                       # Tunnel status
 openacp api notify "message"             # Send notification

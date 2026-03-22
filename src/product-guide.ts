@@ -27,8 +27,28 @@ A session = one conversation with one AI agent working in one project folder.
 Each session gets its own Telegram topic. Chat there to give instructions to the agent.
 
 ### Agents
-An agent is an AI coding tool (e.g., Claude Code). You can configure multiple agents.
+An agent is an AI coding tool (e.g., Claude Code, Gemini, Cursor, Codex, etc.).
+OpenACP supports 28+ agents from the official ACP Registry (agentclientprotocol.com).
+You can install multiple agents and choose which one to use per session.
 The default agent is used when you don't specify one.
+
+### Agent Management
+- Browse agents: \`/agents\` in Telegram or \`openacp agents\` in CLI
+- Install: tap the install button in /agents, or \`openacp agents install <name>\`
+- Uninstall: \`openacp agents uninstall <name>\`
+- Setup/login: \`openacp agents run <name> -- <args>\` (e.g., \`openacp agents run gemini -- auth login\`)
+- Details: \`openacp agents info <name>\` shows version, dependencies, and setup steps
+
+Some agents need additional setup before they can be used:
+- Claude: requires \`claude login\`
+- Gemini: requires \`openacp agents run gemini -- auth login\`
+- Codex: requires setting \`OPENAI_API_KEY\` environment variable
+- GitHub Copilot: requires \`openacp agents run copilot -- auth login\`
+
+Agents are installed in three ways depending on the agent:
+- **npx** — Node.js agents, downloaded automatically on first use
+- **uvx** — Python agents, downloaded automatically on first use
+- **binary** — Platform-specific binaries, downloaded to \`~/.openacp/agents/\`
 
 ### Project Folder (Workspace)
 The directory where the agent reads, writes, and runs code.
@@ -162,7 +182,8 @@ Just chat naturally: "How do I create a session?", "What's the status?", "Someth
 | \`/cancel\` | Session topic | Cancel current session |
 | \`/status\` | Anywhere | Show status |
 | \`/sessions\` | Anywhere | List all sessions |
-| \`/agents\` | Anywhere | List available agents |
+| \`/agents\` | Anywhere | Browse & install agents from ACP Registry |
+| \`/install <name>\` | Anywhere | Install an agent |
 | \`/enable_dangerous\` | Session topic | Auto-approve all permissions |
 | \`/disable_dangerous\` | Session topic | Restore permission prompts |
 | \`/handoff\` | Session topic | Transfer session to terminal |
@@ -208,6 +229,14 @@ Just chat naturally: "How do I create a session?", "What's the status?", "Someth
 ### Configuration
 - \`openacp config\` — Interactive config editor
 - \`openacp reset\` — Delete all data and start fresh
+
+### Agent Management (CLI)
+- \`openacp agents\` — List all agents (installed + available from ACP Registry)
+- \`openacp agents install <name>\` — Install an agent
+- \`openacp agents uninstall <name>\` — Remove an agent
+- \`openacp agents info <name>\` — Show details, dependencies, and setup guide
+- \`openacp agents run <name> [-- args]\` — Run agent CLI directly (for login, config, etc.)
+- \`openacp agents refresh\` — Force-refresh registry cache
 
 ### Plugins
 - \`openacp install <package>\` — Install adapter plugin (e.g., \`@openacp/adapter-discord\`)
@@ -267,10 +296,10 @@ Config file: \`~/.openacp/config.json\`
 - **telegram.chatId** — Your Telegram supergroup ID
 
 ### Agents
-- **agents.<name>.command** — Agent executable path (e.g., \`claude\`, \`codex\`)
-- **agents.<name>.args** — Arguments to pass to the agent command
-- **agents.<name>.env** — Custom environment variables for the agent subprocess
 - **defaultAgent** — Which agent to use by default
+- Agents are managed via \`/agents\` (Telegram) or \`openacp agents\` (CLI)
+- Installed agents are stored in \`~/.openacp/agents.json\`
+- Agent list is fetched from the ACP Registry CDN and cached locally (24h)
 
 ### Workspace
 - **workspace.baseDir** — Base directory for project folders (default: \`~/openacp-workspace\`)
@@ -322,9 +351,10 @@ Override config with env vars:
 - Check system health: Assistant can run health check
 
 ### Agent not found
-- Check available agents: \`/agents\`
-- Verify agent command is installed and in PATH
-- Check config: agent command + args must be correct
+- Check available agents: \`/agents\` or \`openacp agents\`
+- Install missing agent: \`openacp agents install <name>\`
+- Some agents need login first: \`openacp agents info <name>\` to see setup steps
+- Run agent CLI for setup: \`openacp agents run <name> -- <args>\`
 
 ### Permission request not showing
 - Check Notifications topic for the alert
@@ -355,6 +385,9 @@ Override config with env vars:
 
 All data is stored in \`~/.openacp/\`:
 - \`config.json\` — Configuration
+- \`agents.json\` — Installed agents (managed by AgentCatalog)
+- \`registry-cache.json\` — Cached ACP Registry data (refreshes every 24h)
+- \`agents/\` — Downloaded binary agents
 - \`sessions/\` — Session records and state
 - \`topics/\` — Topic-to-session mappings
 - \`logs/\` — System and session logs
