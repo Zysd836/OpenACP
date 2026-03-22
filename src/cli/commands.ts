@@ -1031,8 +1031,18 @@ async function agentsRun(nameOrId: string | undefined, extraArgs: string[]): Pro
   const command = installed.command;
 
   // Include agent's base args (e.g., package name for npx) but strip ACP-specific flags
-  const acpFlags = new Set(["--acp", "acp", "--acp=true"]);
-  const baseArgs = installed.args.filter((a) => !acpFlags.has(a));
+  const acpFlags = new Set(["--acp", "acp", "--acp=true", "--experimental-skills"]);
+  const baseArgs: string[] = [];
+  for (let i = 0; i < installed.args.length; i++) {
+    const arg = installed.args[i]!;
+    // Skip standalone ACP flags
+    if (acpFlags.has(arg)) continue;
+    // Skip "--output-format acp" pair (factory-droid pattern)
+    if (arg === "--output-format" && installed.args[i + 1] === "acp") { i++; continue; }
+    // Skip "exec" subcommand used only in ACP mode (factory-droid)
+    if (arg === "exec" && installed.args[i + 1] === "--output-format") continue;
+    baseArgs.push(arg);
+  }
   const fullArgs = [...baseArgs, ...userArgs];
 
   console.log(`\n  Running: ${command} ${fullArgs.join(" ")}\n`);
